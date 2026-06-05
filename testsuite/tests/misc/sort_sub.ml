@@ -97,8 +97,8 @@ module Small_Impl_Dynarray = struct
    let length = Dynarray.length 
    let get = Dynarray.get
    let for_all2 = Dynarray.for_all2
-   let sort = Dynarray.sort
-   let stable_sort_sub = Dynarray.stable_sort_sub
+   let sort cmp a = Dynarray.sort cmp a 3
+   let stable_sort_sub cmp a ofs len = Dynarray.stable_sort_sub cmp a ofs len 3
    let copy = Dynarray.copy
 end
 
