@@ -47,6 +47,10 @@ let fmt_longident f x = fprintf f "\"%a\"" fmt_longident_aux x
 let fmt_longident_loc f (x : Longident.t loc) =
   fprintf f "\"%a\" %a" fmt_longident_aux x.txt fmt_location x.loc
 
+let fmt_longident_loc_list f li =
+  List.iter 
+    (fun x -> fprintf f "\"%a.\" %a" fmt_longident_aux x.txt fmt_location x.loc) li
+
 let fmt_string_loc f (x : string loc) =
   fprintf f "\"%s\" %a" x.txt fmt_location x.loc
 
@@ -968,7 +972,7 @@ and label_decl i ppf {pld_name; pld_mutable; pld_type; pld_loc; pld_attributes}=
   core_type (i+1) ppf pld_type
 
 and longident_x_pattern i ppf (li, p) =
-  line i ppf "%a\n" fmt_longident_loc li;
+  line i ppf "%a\n" fmt_longident_loc_list li;
   pattern (i+1) ppf p;
 
 and case i ppf {pc_lhs; pc_guard; pc_rhs} =
@@ -1013,7 +1017,7 @@ and string_x_expression i ppf (s, e) =
   expression (i+1) ppf e;
 
 and longident_x_expression i ppf (li, e) =
-  line i ppf "%a\n" fmt_longident_loc li;
+  line i ppf "%a\n" fmt_longident_loc_list li;
   expression (i+1) ppf e;
 
 and label_x_expression i ppf (l,e) =

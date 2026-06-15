@@ -323,7 +323,7 @@ type ('dot,'index) array_family = {
     Lexing.position * Lexing.position -> 'dot -> assign:bool -> paren_kind
   -> index_dim -> Longident.t Location.loc
   (*
-    This functions computes the name of the explicit indexing operator
+    This function computes the name of the explicit indexing operator
     associated with a sugared array indexing expression.
 
     For instance, for builtin arrays, if Clflags.unsafe is set,
@@ -2951,23 +2951,37 @@ record_update_expr:
     { $1 }
 ;
 record_expr_content:
-  eo = ioption(terminated(record_update_expr, WITH))
-  fields = separated_or_terminated_nonempty_list(SEMI, record_expr_field)
-    { eo, fields }
+  | e = record_update_expr WITH
+    fields = separated_or_terminated_nonempty_list(SEMI, record_expr_field)
+      { Some e, fields }
+  | fo = leading_record_expr_field? SEMI 
+    fields = separated_or_terminated_nonempty_list(SEMI, record_expr_field)
+      { None, Option.to_list fo @ fields }
 ;
+
+%inline leading_record_expr_field:
+  label = mkrhs(label_longident)
+  c = type_constraint?
+  eo = preceded(EQUAL, expr)?
+    { let constraint_loc, label, e =
+        match eo with
+        | None ->
+          (* No pattern; this is a pun. Desugar it. *)
+            $sloc, make_ghost label, exp_of_longident label
+        | Some e ->
+            ($startpos(c), $endpos), label, e
+      in
+      [label], mkexp_opt_constraint ~loc:constraint_loc e c }
+
 %inline record_expr_field:
-  | label = mkrhs(label_longident)
+  | leading_record_expr_field {$1}
+  | labels = separated_nontrivial_llist(DOT, mkrhs(label_longident))
     c = type_constraint?
-    eo = preceded(EQUAL, expr)?
-      { let constraint_loc, label, e =
-          match eo with
-          | None ->
-              (* No pattern; this is a pun. Desugar it. *)
-              $sloc, make_ghost label, exp_of_longident label
-          | Some e ->
-              ($startpos(c), $endpos), label, e
-        in
-        label, mkexp_opt_constraint ~loc:constraint_loc e c }
+    eo = preceded(EQUAL, expr)
+      { let constraint_loc, labels, e = 
+        ($startpos(c), $endpos), labels, eo
+        in labels, mkexp_opt_constraint ~loc:constraint_loc e c
+      }
 ;
 %inline object_expr_content:
   xs = separated_or_terminated_nonempty_list(SEMI, object_expr_field)
@@ -3217,31 +3231,32 @@ labeled_tuple_pattern(self):
   ps = separated_or_terminated_nonempty_list(SEMI, pattern)
     { ps }
 ;
-(* A label-pattern list is a nonempty list of label-pattern pairs, optionally
+(* A labels-pattern list is a nonempty list of labels-pattern pairs, optionally
    followed with an UNDERSCORE, separated-or-terminated with semicolons. *)
 %inline record_pat_content:
-  listx(SEMI, record_pat_field, UNDERSCORE)
-    { let fields, closed = $1 in
+  ioption(SEMI) fields = listx(SEMI, record_pat_field, UNDERSCORE)
+    { let fields, closed = fields in
       let closed = match closed with Some () -> Open | None -> Closed in
       fields, closed }
 ;
 %inline record_pat_field:
-  label = mkrhs(label_longident)
-  octy = preceded(COLON, core_type)?
-  opat = preceded(EQUAL, pattern)?
-    { let constraint_loc, label, pat =
-        match opat with
-        | None ->
-            (* No pattern; this is a pun. Desugar it.
-               But that the pattern was there and the label reconstructed (which
-               piece of AST is marked as ghost is important for warning
-               emission). *)
-            $sloc, make_ghost label, pat_of_label label
-        | Some pat ->
-            ($startpos(octy), $endpos), label, pat
-      in
-      label, mkpat_opt_constraint ~loc:constraint_loc pat octy
-    }
+  | label = mkrhs(label_longident)
+    octy = preceded(COLON, core_type)?
+    opat = preceded(EQUAL, pattern)?
+      { let constraint_loc, label, pat =
+          match opat with
+          | None -> $sloc, make_ghost label, pat_of_label label
+          | Some pat -> ($startpos(octy), $endpos), label, pat
+        in [label], mkpat_opt_constraint ~loc:constraint_loc pat octy
+      }
+
+  | labels = separated_nontrivial_llist(DOT, mkrhs(label_longident))
+    octy = preceded(COLON, core_type)?
+    opat = preceded(EQUAL, pattern)
+      { let constraint_loc, labels, pat = 
+        ($startpos(octy), $endpos), labels, opat
+        in labels, mkpat_opt_constraint ~loc:constraint_loc pat octy
+      }
 ;
 
 /* Value descriptions */

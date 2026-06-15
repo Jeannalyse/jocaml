@@ -281,11 +281,11 @@ and pattern_desc =
             - [`A]   when [pat] is [None],
             - [`A P] when [pat] is [Some P]
          *)
-  | Ppat_record of (Longident.t loc * pattern) list * closed_flag
-      (** [Ppat_record([(l1, P1) ; ... ; (ln, Pn)], flag)] represents:
-            - [{ l1=P1; ...; ln=Pn }]
+  | Ppat_record of (Longident.t loc list * pattern) list * closed_flag
+      (** [Ppat_record([([l1;l2], P1) ; ... ; ([ln], Pn)], flag)] represents:
+            - [{ l1.l2=P1; ...; ln=Pn }]
                  when [flag] is {{!Asttypes.closed_flag.Closed}[Closed]}
-            - [{ l1=P1; ...; ln=Pn; _}]
+            - [{ l1.l2=P1; ...; ln=Pn; _}]
                  when [flag] is {{!Asttypes.closed_flag.Open}[Open]}
 
            Invariant: [n > 0]
@@ -384,10 +384,10 @@ and expression_desc =
             - [`A]   when [exp] is [None]
             - [`A E] when [exp] is [Some E]
          *)
-  | Pexp_record of (Longident.t loc * expression) list * expression option
-      (** [Pexp_record([(l1,P1) ; ... ; (ln,Pn)], exp0)] represents
-            - [{ l1=P1; ...; ln=Pn }]         when [exp0] is [None]
-            - [{ E0 with l1=P1; ...; ln=Pn }] when [exp0] is [Some E0]
+  | Pexp_record of (Longident.t loc list * expression) list * expression option
+      (** [Pexp_record([([l1;l2;l3],P1) ; ... ; ([ln],Pn)], exp0)] represents
+            - [{ l1.l2.l3=P1; ...; ln=Pn }]         when [exp0] is [None]
+            - [{ E0 with l1.l2.l3=P1; ...; ln=Pn }] when [exp0] is [Some E0]
 
            Invariant: [n > 0]
          *)

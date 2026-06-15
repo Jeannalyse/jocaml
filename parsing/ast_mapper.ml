@@ -503,8 +503,8 @@ module E = struct
     | Pexp_variant (lab, eo) ->
         variant ~loc ~attrs lab (map_opt (sub.expr sub) eo)
     | Pexp_record (l, eo) ->
-        record ~loc ~attrs
-          (List.map (map_tuple (map_loc_lid sub) (sub.expr sub)) l)
+        record ~loc ~attrs 
+          (List.map (map_tuple (List.map (map_loc_lid sub)) (sub.expr sub)) l)
           (map_opt (sub.expr sub) eo)
     | Pexp_field (e, lid) ->
         field ~loc ~attrs (sub.expr sub e) (map_loc_lid sub lid)
@@ -589,7 +589,8 @@ module P = struct
     | Ppat_variant (l, p) -> variant ~loc ~attrs l (map_opt (sub.pat sub) p)
     | Ppat_record (lpl, cf) ->
         record ~loc ~attrs
-               (List.map (map_tuple (map_loc_lid sub) (sub.pat sub)) lpl) cf
+          (List.map (map_tuple (List.map (map_loc_lid sub)) (sub.pat sub)) lpl)
+          cf
     | Ppat_array pl -> array ~loc ~attrs (List.map (sub.pat sub) pl)
     | Ppat_or (p1, p2) -> or_ ~loc ~attrs (sub.pat sub p1) (sub.pat sub p2)
     | Ppat_constraint (p, t) ->
@@ -975,6 +976,7 @@ module PpxContext = struct
       (String.Map.bindings !cookies)
 
   let mk fields =
+    let fields = List.map (fun (field, exp) -> ([field], exp)) fields in
     {
       attr_name = { txt = "ocaml.ppx.context"; loc = Location.none };
       attr_payload = Parsetree.PStr [Str.eval (Exp.record fields None)];
@@ -1010,7 +1012,13 @@ module PpxContext = struct
   let get_fields = function
     | PStr [{pstr_desc = Pstr_eval
                  ({ pexp_desc = Pexp_record (fields, None) }, [])}] ->
-        fields
+        let fields = List.map 
+        (fun (flist, exp) -> match flist with
+          | [] -> raise_errorf "Internal error: invalid [@@@ocaml.ppx.context] syntax"
+          | [x] -> (x, exp)
+          | _ :: _ -> raise_errorf "Internal error: invalid [@@@ocaml.ppx.context] syntax"
+        ) fields
+        in fields
     | _ ->
         raise_errorf "Internal error: invalid [@@@ocaml.ppx.context] syntax"
 

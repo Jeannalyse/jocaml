@@ -93,7 +93,8 @@ let iterator =
     | Ppat_record ([], _) -> empty_record loc
     | Ppat_construct (id, _) -> simple_longident id
     | Ppat_record (fields, _) ->
-      List.iter (fun (id, _) -> simple_longident id) fields
+      List.iter
+        (fun (l, _) -> List.iter (fun id -> simple_longident id) l) fields
     | _ -> ()
   in
   let expr self exp =
@@ -116,7 +117,8 @@ let iterator =
     | Pexp_setfield (_, id, _)
     | Pexp_new id -> simple_longident id
     | Pexp_record (fields, _) ->
-      List.iter (fun (id, _) -> simple_longident id) fields
+      List.iter
+        (fun (l, _) -> List.iter (fun id -> simple_longident id) l) fields
     | Pexp_function (params, _, Pfunction_body _) ->
         if
           List.for_all

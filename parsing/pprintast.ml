@@ -420,6 +420,9 @@ let labelled printer f (label, c) =
   | Labelled s -> pp f "%a:%a" ident_of_name s printer c
   | Optional s -> pp f "?%a:%a" ident_of_name s printer c
 
+let record_field_path f li =
+  list longident_loc ~sep:"." f li
+
 (* c ['a,'b] *)
 let rec class_params_def ctxt f =  function
   | [] -> ()
@@ -653,13 +656,13 @@ and simple_pattern ctxt (f:Format.formatter) (x:pattern) : unit =
     | Ppat_record (l, closed) ->
         let longident_x_pattern f (li, p) =
           match (li,p) with
-          | ({txt=Lident s;_ },
+          | ([{txt=Lident s;_ }],
              {ppat_desc=Ppat_var {txt;_};
               ppat_attributes=[]; _})
             when s = txt ->
-              pp f "@[<2>%a@]" longident_loc li
+              pp f "@[<2>%s@]" s
           | _ ->
-              pp f "@[<2>%a@;=@;%a@]" longident_loc li (pattern1 ctxt) p
+              pp f "@[<2>%a@;=@;%a@]" record_field_path li (pattern1 ctxt) p
         in
         begin match closed with
         | Closed ->
@@ -1036,14 +1039,15 @@ and simple_expr ctxt f x =
           (core_type ctxt) ct
     | Pexp_variant (l, None) -> pp f "`%a" ident_of_name l
     | Pexp_record (l, eo) ->
-        let longident_x_expression f ( li, e) =
-          match e with
-          |  {pexp_desc=Pexp_ident {txt;_};
-              pexp_attributes=[]; _} when Longident.same li.txt txt ->
-              pp f "@[<hov2>%a@]" longident_loc li
+        let longident_x_expression f (li, e) =
+          match (li, e) with
+          |  ([{txt=Lident s;_ }],
+              {pexp_desc=Pexp_ident {txt;_};
+              pexp_attributes=[]; _}) when Longident.same (Lident s) txt ->
+              pp f "@[<hov2>%s@]" s
           | _ ->
               pp f "@[<hov2>%a@;=@;%a@]"
-                longident_loc li
+                record_field_path li
                 (simple_expr ctxt) e
         in
         pp f "@[<hv0>@[<hv2>{@;%a%a@]@;}@]"(* "@[<hov2>{%a%a}@]" *)
