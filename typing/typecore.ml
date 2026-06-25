@@ -2020,7 +2020,7 @@ let rec has_literal_pattern p = match p.ppat_desc with
    functions, depending on the kind of pattern to be produced. In
    particular, there are both value and computation or-patterns, and
    the type-checking logic for or-patterns is horribly complex; having
-   it in two different places would be twice as horirble.
+   it in two different places would be twice as horrible.
 
    The solution is to pass a GADT tag to [type_pat] to indicate whether
    a value or computation pattern is expected. This way, there is a single
