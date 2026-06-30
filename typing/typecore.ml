@@ -1780,7 +1780,12 @@ let disambiguate_label_by_ids closed ids labels  : (_, _) result =
 
 (* Only issue warnings once per record constructor/pattern *)
 let disambiguate_lid_a_list loc closed env usage expected_type lid_a_list =
-  let ids = List.map (fun (lid, _) -> Longident.last lid.txt) lid_a_list in
+  let ids = List.map (fun (lid_list, _) ->
+    let lid = match Longident.unflatten lid_list with
+    | None ->
+    | Some x -> x
+    in Longident.last lid.txt)
+    lid_a_list in
   let w_pr = ref false and w_amb = ref []
   and w_scope = ref [] and w_scope_ty = ref "" in
   let warn loc msg =
@@ -1810,7 +1815,8 @@ let disambiguate_lid_a_list loc closed env usage expected_type lid_a_list =
        themselves, instead of the "ghost" qualification [M.foo]
        that does not come from the source program. *)
     let lbl_list =
-      List.map (fun (lid, _) ->
+      List.map (fun (lid_list, _) ->
+        let lid = Longident.unflatten lid_list in
           match lid.txt with
           | Longident.Ldot _ -> Some (process_label lid)
           | _ -> None
@@ -1819,7 +1825,7 @@ let disambiguate_lid_a_list loc closed env usage expected_type lid_a_list =
     (* Find a module prefix (if any) to qualify unqualified labels *)
     let qual =
       List.find_map (function
-          | {txt = Longident.Ldot (modname, _); _}, _ -> Some modname
+          | [{txt = Longident.Ldot (modname, _); _}], _ -> Some modname
           | _ -> None
         ) lid_a_list
     in
@@ -1833,8 +1839,9 @@ let disambiguate_lid_a_list loc closed env usage expected_type lid_a_list =
        qualifying at least one of the fields. *)
     List.map2 (fun lid_a lbl ->
         match lbl, lid_a with
-        | Some lbl, (lid, a) -> lid, lbl, a
-        | None, (lid, a) ->
+        | Some lbl, (lid_list, a) -> lid_list, lbl, a
+        | None, (lid_list, a) ->
+            let lid = Longident.unflatten lid_list in
             let qual_lid =
               match qual, lid.txt with
               | Some modname, Longident.Lident s ->
